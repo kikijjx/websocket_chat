@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div id="chat-wrapper">
+        <div id="nickname-group">
+            <input type="text" id="nickname-input" placeholder="Никнейм" />
+        </div>
+        <div id="chat-container"></div>
+        <div id="online-count">Онлайн: 0</div>
+        <div id="input-group">
+            <input type="text" id="message-input" placeholder="Введите сообщение">
+            <button id="send-button">Отправить</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = new WebSocket('ws://localhost:8888/ws');
+        let nickname = '';
+    
+        document.getElementById('nickname-input').addEventListener('input', function(e) {
+            nickname = e.target.value.trim();
+        });
+    
+        socket.onmessage = function(event) {
+            const chatContainer = document.getElementById('chat-container');
+            const onlineCountContainer = document.getElementById('online-count');
+        
+            try {
+                const parsedMessage = JSON.parse(event.data);
+    
+                if (parsedMessage.type === "online_count") {
+                    const onlineCount = parsedMessage.count;
+                    onlineCountContainer.innerHTML = `Онлайн: ${onlineCount}`;
+                } else {
+                    const nickname = parsedMessage.nickname || 'Anonymous';
+                    const message = parsedMessage.message || '';
+                    const nicknameColor = parsedMessage.color;
+                    chatContainer.innerHTML += `<div><strong style="color: ${nicknameColor};">${nickname}:</strong> ${message}</div>`;
+                }
+            } catch (e) {
+                console.error('Error parsing message:', e);
+            }
+    
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+    
+        document.getElementById('send-button').onclick = function() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            if (message) {
+                const data = {
+                    nickname: nickname || 'Anonymous',
+                    message: message
+                };
+                socket.send(JSON.stringify(data));
+                messageInput.value = '';
+            }
+        };
+    
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('send-button').click();
+            }
+        });
+    </script>
+    
+</body>
+</html>
